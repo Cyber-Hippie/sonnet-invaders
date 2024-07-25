@@ -12,7 +12,7 @@
 <body>
     <script>
 	// Claude 3.5 Sonnet Prompt:
-	// let the invaders shoot
+	// make em shoot only 5 bullets at a time
 	
 	// Set up the canvas
 	const canvas = document.createElement('canvas');
@@ -46,6 +46,7 @@
 
 	// Enemy shooting
 	const enemyShootChance = 0.02; // 2% chance per enemy per frame
+	const maxEnemyBullets = 5; // Maximum number of enemy bullets on screen
 
 	// Create enemies
 	for (let row = 0; row < enemyRows; row++) {
@@ -101,15 +102,20 @@
 
 	// Enemy shooting
 	function enemyShoot() {
-		for (let enemy of enemies) {
-			if (Math.random() < enemyShootChance) {
-				enemyBullets.push({
-					x: enemy.x + enemy.width / 2,
-					y: enemy.y + enemy.height,
-					width: 3,
-					height: 10,
-					dy: 3
-				});
+		if (enemyBullets.length < maxEnemyBullets) {
+			for (let enemy of enemies) {
+				if (Math.random() < enemyShootChance) {
+					enemyBullets.push({
+						x: enemy.x + enemy.width / 2,
+						y: enemy.y + enemy.height,
+						width: 3,
+						height: 10,
+						dy: 3
+					});
+					if (enemyBullets.length >= maxEnemyBullets) {
+						break;
+					}
+				}
 			}
 		}
 	}
