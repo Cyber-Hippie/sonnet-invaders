@@ -1,6 +1,8 @@
 // Claude 3.5 Sonnet Prompt:
-// the game crashes with the error message: "Uncaught TypeError: Cannot read properties of undefined (reading 'y')
-// at gameLoop (invaders.js:175:24)" when the invader in right corner in the row that's nearest to the bottom is hit. Can you fix that?
+// I have a space invaders game in HTML and JavaScript.
+// {HTML Code}
+// {JS Code}
+// Add a score output that shows "Score: 00000" in the upper right corner
 
 // Get the canvas element
 const canvas = document.createElement('canvas');
@@ -35,6 +37,9 @@ const enemyDropDistance = 30;
 // Enemy shooting
 const enemyShootChance = 0.02; // 2% chance per enemy per frame
 const maxEnemyBullets = 5; // Maximum number of enemy bullets on screen
+
+// Score
+let score = 0;
 
 // Create enemies
 for (let row = 0; row < enemyRows; row++) {
@@ -125,6 +130,7 @@ function checkCollisions() {
             ) {
                 enemies.splice(j, 1);
                 bullets.splice(i, 1);
+                score += 10; // Increase score when an enemy is destroyed
                 break;
             }
         }
@@ -152,6 +158,14 @@ function checkCollisions() {
     }
 
     return false;
+}
+
+// Draw score
+function drawScore() {
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`Score: ${score.toString().padStart(5, '0')}`, canvas.width - 10, 30);
 }
 
 // Game loop
@@ -208,6 +222,9 @@ function gameLoop() {
     ctx.fillStyle = 'blue';
     ctx.fillRect(player.x, player.y, player.width, player.height);
     
+    // Draw score
+    drawScore();
+    
     // Check for game over
     if (enemies.length === 0) {
         gameWin();
@@ -219,13 +236,17 @@ function gameLoop() {
 function gameOver() {
     ctx.fillStyle = 'white';
     ctx.font = '30px Arial';
-    ctx.fillText('Game Over!', canvas.width / 2 - 70, canvas.height / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2);
+    drawScore(); // Show final score
 }
 
 function gameWin() {
     ctx.fillStyle = 'white';
     ctx.font = '30px Arial';
-    ctx.fillText('You Win!', canvas.width / 2 - 50, canvas.height / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText('You Win!', canvas.width / 2, canvas.height / 2);
+    drawScore(); // Show final score
 }
 
 // Start the game
