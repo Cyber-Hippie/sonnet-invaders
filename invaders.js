@@ -1,5 +1,6 @@
 // Claude 3.5 Sonnet Prompt:
-// create html that loads the js program. name the js file invaders.js
+// the game crashes with the error message: "Uncaught TypeError: Cannot read properties of undefined (reading 'y')
+// at gameLoop (invaders.js:175:24)" when the invader in right corner in the row that's nearest to the bottom is hit. Can you fix that?
 
 // Get the canvas element
 const canvas = document.createElement('canvas');
@@ -70,13 +71,17 @@ function keyUpHandler(e) {
 // Move enemies
 function moveEnemies() {
     let dropEnemies = false;
+    let leftmostEnemy = Infinity;
+    let rightmostEnemy = -Infinity;
     
     for (let enemy of enemies) {
         enemy.x += enemySpeed * enemyDirection;
-        
-        if (enemy.x <= 0 || enemy.x + enemy.width >= canvas.width) {
-            dropEnemies = true;
-        }
+        leftmostEnemy = Math.min(leftmostEnemy, enemy.x);
+        rightmostEnemy = Math.max(rightmostEnemy, enemy.x + enemy.width);
+    }
+    
+    if (leftmostEnemy <= 0 || rightmostEnemy >= canvas.width) {
+        dropEnemies = true;
     }
     
     if (dropEnemies) {
@@ -105,6 +110,48 @@ function enemyShoot() {
             }
         }
     }
+}
+
+// Check collisions
+function checkCollisions() {
+    // Check player bullets with enemies
+    for (let i = bullets.length - 1; i >= 0; i--) {
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            if (
+                bullets[i].x < enemies[j].x + enemies[j].width &&
+                bullets[i].x + bullets[i].width > enemies[j].x &&
+                bullets[i].y < enemies[j].y + enemies[j].height &&
+                bullets[i].y + bullets[i].height > enemies[j].y
+            ) {
+                enemies.splice(j, 1);
+                bullets.splice(i, 1);
+                break;
+            }
+        }
+    }
+
+    // Check enemy bullets with player
+    for (let i = enemyBullets.length - 1; i >= 0; i--) {
+        if (
+            enemyBullets[i].x < player.x + player.width &&
+            enemyBullets[i].x + enemyBullets[i].width > player.x &&
+            enemyBullets[i].y < player.y + player.height &&
+            enemyBullets[i].y + enemyBullets[i].height > player.y
+        ) {
+            gameOver();
+            return true;
+        }
+    }
+
+    // Check if enemies have reached the player
+    for (let enemy of enemies) {
+        if (enemy.y + enemy.height >= player.y) {
+            gameOver();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // Game loop
@@ -143,42 +190,18 @@ function gameLoop() {
         // Remove bullets that are off screen
         if (enemyBullets[i].y > canvas.height) {
             enemyBullets.splice(i, 1);
-        } else if (
-            enemyBullets[i].x < player.x + player.width &&
-            enemyBullets[i].x + enemyBullets[i].width > player.x &&
-            enemyBullets[i].y < player.y + player.height &&
-            enemyBullets[i].y + enemyBullets[i].height > player.y
-        ) {
-            // Player hit by enemy bullet
-            gameOver();
-            return;
         }
     }
     
-    // Draw and check collision for enemies
-    for (let i = enemies.length - 1; i >= 0; i--) {
+    // Check collisions
+    if (checkCollisions()) {
+        return;  // Game over, stop the loop
+    }
+    
+    // Draw enemies
+    for (let enemy of enemies) {
         ctx.fillStyle = 'green';
-        ctx.fillRect(enemies[i].x, enemies[i].y, enemies[i].width, enemies[i].height);
-        
-        // Check collision with player bullets
-        for (let j = bullets.length - 1; j >= 0; j--) {
-            if (
-                bullets[j].x < enemies[i].x + enemies[i].width &&
-                bullets[j].x + bullets[j].width > enemies[i].x &&
-                bullets[j].y < enemies[i].y + enemies[i].height &&
-                bullets[j].y + bullets[j].height > enemies[i].y
-            ) {
-                enemies.splice(i, 1);
-                bullets.splice(j, 1);
-                break;
-            }
-        }
-        
-        // Check if enemies have reached the player
-        if (enemies[i].y + enemies[i].height >= player.y) {
-            gameOver();
-            return;
-        }
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
     }
     
     // Draw player
