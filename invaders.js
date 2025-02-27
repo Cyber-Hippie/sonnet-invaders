@@ -41,14 +41,49 @@ const maxEnemyBullets = 5; // Maximum number of enemy bullets on screen
 // Score
 let score = 0;
 
-// Create enemies
+// Enemy types and their designs
+const enemyTypes = [
+    {
+        shape: [
+            "  ▄██▄  ",
+            "▄██████▄",
+            "██▄██▄██",
+            "  ▀▀▀▀  "
+        ],
+        color: '#FF0000'  // Red for top row
+    },
+    {
+        shape: [
+            " ▄████▄ ",
+            "███████",
+            "▀ ███ ▀",
+            " ▀ ▀ ▀ "
+        ],
+        color: '#00FF00'  // Green for middle rows
+    },
+    {
+        shape: [
+            " ▄▀▀▀▄ ",
+            "▄█▄▄▄█▄",
+            "███████",
+            "▀ ▀ ▀ ▀"
+        ],
+        color: '#0099FF'  // Blue for bottom rows
+    }
+];
+
+// Modify the enemy creation loop to include enemy type
 for (let row = 0; row < enemyRows; row++) {
+    const enemyType = enemyTypes[Math.min(Math.floor(row / 2), enemyTypes.length - 1)];
     for (let col = 0; col < enemyCols; col++) {
         enemies.push({
             x: col * (enemyWidth + enemyPadding) + enemyPadding,
             y: row * (enemyHeight + enemyPadding) + enemyPadding + 30,
             width: enemyWidth,
-            height: enemyHeight
+            height: enemyHeight,
+            type: enemyType,
+            shape: enemyType.shape,
+            color: enemyType.color
         });
     }
 }
@@ -214,8 +249,20 @@ function gameLoop() {
     
     // Draw enemies
     for (let enemy of enemies) {
-        ctx.fillStyle = 'green';
-        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        ctx.save();
+        ctx.translate(enemy.x, enemy.y);
+        const scale = enemy.width / 8; // 8 is the width of our ASCII art
+        ctx.scale(scale, scale);
+        
+        ctx.fillStyle = enemy.color;
+        enemy.shape.forEach((row, i) => {
+            for (let j = 0; j < row.length; j++) {
+                if (row[j] !== ' ') {
+                    ctx.fillRect(j, i, 1, 1);
+                }
+            }
+        });
+        ctx.restore();
     }
     
     // Draw player
