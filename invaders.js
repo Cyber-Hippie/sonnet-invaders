@@ -27,7 +27,8 @@ const player = {
         "#########",
         "## ### ##"
     ],
-    color: '#5599FF'  // Light blue for player
+    color: '#5599FF',  // Light blue for player
+    lives: 3
 };
 
 const bullets = [];
@@ -221,6 +222,39 @@ function enemyShoot() {
     }
 }
 
+// Draw lives
+function drawLives() {
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`Lives: ${player.lives}`, canvas.width - 20, 30);
+    
+    // Draw small player ships to represent lives
+    const shipWidth = 20;
+    const shipHeight = 12;
+    const shipPadding = 10;
+    const startX = canvas.width - 20 - (player.lives * (shipWidth + shipPadding));
+    
+    for (let i = 0; i < player.lives; i++) {
+        const x = startX + i * (shipWidth + shipPadding);
+        
+        ctx.save();
+        ctx.translate(x, 50);
+        const scale = shipWidth / 9; // 9 is the width of our ASCII art
+        ctx.scale(scale, scale);
+        
+        ctx.fillStyle = player.color;
+        player.shape.forEach((row, j) => {
+            for (let k = 0; k < row.length; k++) {
+                if (row[k] === '#') {
+                    ctx.fillRect(k, j, 1, 1);
+                }
+            }
+        });
+        ctx.restore();
+    }
+}
+
 // Check collisions
 function checkCollisions() {
     // Check player bullets with enemies
@@ -248,8 +282,17 @@ function checkCollisions() {
             enemyBullets[i].y < player.y + player.height &&
             enemyBullets[i].y + enemyBullets[i].height > player.y
         ) {
-            gameOver();
-            return true;
+            enemyBullets.splice(i, 1);
+            player.lives--;
+            
+            if (player.lives <= 0) {
+                gameOver();
+                return true;
+            }
+            
+            // Reset player position
+            player.x = canvas.width / 2;
+            return false;
         }
     }
 
@@ -358,6 +401,9 @@ function gameLoop() {
     
     // Draw score
     drawScore();
+    
+    // Draw lives
+    drawLives();
     
     // Check for game over
     if (enemies.length === 0) {
