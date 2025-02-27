@@ -52,6 +52,14 @@ const enemyTypes = [
             "########",
             "  #  #  "
         ],
+        altShape: [
+            "   ##   ",
+            "  ####  ",
+            " ###### ",
+            " ##  ## ",
+            "########",
+            " #    # "
+        ],
         color: '#FF5555'  // Red for top row
     },
     {
@@ -62,6 +70,14 @@ const enemyTypes = [
             "########",
             "  ####  ",
             " ##  ## "
+        ],
+        altShape: [
+            " ##  ## ",
+            "########",
+            "## ## ##",
+            "########",
+            " #    # ",
+            "# #  # #"
         ],
         color: '#55FF55'  // Green for middle rows
     },
@@ -74,11 +90,24 @@ const enemyTypes = [
             "# #### #",
             "#      #"
         ],
+        altShape: [
+            "  ####  ",
+            " ###### ",
+            "########",
+            "## ## ##",
+            " # ## # ",
+            "##    ##"
+        ],
         color: '#55AAFF'  // Blue for bottom rows
     }
 ];
 
-// Modify the enemy creation loop to include enemy type
+// Add animation variables
+let animationFrame = 0;
+let animationCounter = 0;
+const animationSpeed = 30; // Lower = faster animation
+
+// Modify the enemy creation loop to include animation properties
 for (let row = 0; row < enemyRows; row++) {
     const enemyType = enemyTypes[Math.min(Math.floor(row / 2), enemyTypes.length - 1)];
     for (let col = 0; col < enemyCols; col++) {
@@ -89,7 +118,9 @@ for (let row = 0; row < enemyRows; row++) {
             height: enemyHeight,
             type: enemyType,
             shape: enemyType.shape,
-            color: enemyType.color
+            altShape: enemyType.altShape,
+            color: enemyType.color,
+            currentFrame: 0
         });
     }
 }
@@ -119,6 +150,13 @@ function moveEnemies() {
     let dropEnemies = false;
     let leftmostEnemy = Infinity;
     let rightmostEnemy = -Infinity;
+    
+    // Update animation counter
+    animationCounter++;
+    if (animationCounter >= animationSpeed) {
+        animationCounter = 0;
+        animationFrame = 1 - animationFrame; // Toggle between 0 and 1
+    }
     
     for (let enemy of enemies) {
         enemy.x += enemySpeed * enemyDirection;
@@ -261,7 +299,8 @@ function gameLoop() {
         ctx.scale(scale, scale);
         
         ctx.fillStyle = enemy.color;
-        enemy.shape.forEach((row, i) => {
+        const currentShape = animationFrame === 0 ? enemy.shape : enemy.altShape;
+        currentShape.forEach((row, i) => {
             for (let j = 0; j < row.length; j++) {
                 if (row[j] === '#') {
                     ctx.fillRect(j, i, 1, 1);
