@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #000;
+            color: #fff;
+        }
+        h1 {
+            color: #fff;
+            text-align: center;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #log {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            margin-top: 20px;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Web Audio API Test</h1>
+    
+    <div class="status" id="status">
+        AudioContext Status: <span id="audioStatus" style="color: red;">Not initialized</span>
+    </div>
+    
+    <div class="controls">
+        <button id="initButton">Initialize Audio</button>
+        <button id="testButton">Play Test Sound</button>
+        <button id="shootButton">Play Shoot Sound</button>
+        <button id="explosionButton">Play Explosion Sound</button>
+        <button id="backgroundButton">Play Background Music</button>
+        <button id="stopButton">Stop All Sounds</button>
+    </div>
+    
+    <div id="log">Page loaded. Waiting for user interaction...</div>
+    
+    <script>
+        // Make sure the page is visible
+        document.body.style.display = 'block';
+        
+        // Custom logger that outputs to the page
+        function log(message) {
+            try {
+                const logElement = document.getElementById('log');
+                if (logElement) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    logElement.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+                    logElement.scrollTop = logElement.scrollHeight;
+                }
+                console.log(message);
+            } catch (error) {
+                console.error('Error logging message:', error);
+            }
+        }
+        
+        // Audio context and sounds
+        let audioContext = null;
+        let sounds = {};
+        let currentSound = null;
+        
+        // Update status display
+        function updateStatus() {
+            try {
+                const statusElement = document.getElementById('audioStatus');
+                if (statusElement) {
+                    if (!audioContext) {
+                        statusElement.textContent = 'Not initialized';
+                        statusElement.style.color = 'red';
+                    } else {
+                        statusElement.textContent = audioContext.state;
+                        statusElement.style.color = audioContext.state === 'running' ? 'green' : 'orange';
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating status:', error);
+            }
+        }
+        
+        // Initialize audio
+        document.getElementById('initButton').addEventListener('click', function() {
+            try {
+                log('Initializing audio context...');
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                log(`Audio context created with state: ${audioContext.state}`);
+                updateStatus();
+                
+                // Resume if needed
+                if (audioContext.state === 'suspended') {
+                    log('Audio context is suspended, attempting to resume...');
+                    audioContext.resume().then(() => {
+                        log(`Audio context resumed with state: ${audioContext.state}`);
+                        updateStatus();
+                    }).catch(err => {
+                        log(`Error resuming audio context: ${err}`);
+                    });
+                }
+                
+                alert('Audio initialized successfully!');
+            } catch (error) {
+                log(`Error initializing audio context: ${error}`);
+                alert('Error initializing audio: ' + error.message);
+            }
+        });
+        
+        // Play test sound
+        document.getElementById('testButton').addEventListener('click', function() {
+            if (!audioContext) {
+                log('Audio context not initialized. Click "Initialize Audio" first.');
+                alert('Please initialize audio first!');
+                return;
+            }
+            
+            try {
+                log('Playing test sound...');
+                
+                // Resume context if needed
+                if (audioContext.state === 'suspended') {
+                    log('Audio context is suspended, attempting to resume...');
+                    audioContext.resume();
+                }
+                
+                // Create oscillator
+                const oscillator = audioContext.createOscillator();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime); // A4 note
+                
+                // Create gain node
+                const gainNode = audioContext.createGain();
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
+                
+                // Connect nodes
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Start and stop
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 1);
+                
+                log('Test sound should be playing now');
+                updateStatus();
+            } catch (error) {
+                log(`Error playing test sound: ${error}`);
+                alert('Error playing sound: ' + error.message);
+            }
+        });
+        
+        // Generate shoot sound
+        function generateShootSound() {
+            if (!audioContext) {
+                log('Audio context not initialized');
+                return null;
+            }
+            
+            try {
+                const duration = 0.3;
+                const sampleRate = audioContext.sampleRate;
+                const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                // Create a laser-like sound
+                for (let i = 0; i < buffer.length; i++) {
+                    // Frequency sweep from high to low
+                    const t = i / sampleRate;
+                    const frequency = 1000 - 700 * t;
+                    
+                    // Amplitude envelope (quick attack, slow decay)
+                    const envelope = Math.max(0, 1 - t / duration);
+                    
+                    // Generate sound
+                    data[i] = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.5;
+                }
+                
+                log('Shoot sound generated');
+                return buffer;
+            } catch (error) {
+                log(`Error generating shoot sound: ${error}`);
+                return null;
+            }
+        }
+        
+        // Generate explosion sound
+        function generateExplosionSound() {
+            if (!audioContext) {
+                log('Audio context not initialized');
+                return null;
+            }
+            
+            try {
+                const duration = 0.5;
+                const sampleRate = audioContext.sampleRate;
+                const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                // Create an explosion sound (noise with lowpass filter effect)
+                for (let i = 0; i < buffer.length; i++) {
+                    const t = i / sampleRate;
+                    
+                    // Amplitude envelope (quick attack, medium decay)
+                    const envelope = Math.max(0, 1 - t / (duration * 0.8));
+                    
+                    // Generate noise
+                    const noise = Math.random() * 2 - 1;
+                    
+                    // Low frequency oscillation for rumble
+                    const lfo = Math.sin(2 * Math.PI * 8 * t) * 0.2;
+                    
+                    // Combine with lowpass filter effect (simulated by reducing high frequencies over time)
+                    const filterEffect = Math.max(0, 1 - t / (duration * 0.3));
+                    
+                    // Final sound
+                    data[i] = (noise * filterEffect + lfo) * envelope * 0.7;
+                }
+                
+                log('Explosion sound generated');
+                return buffer;
+            } catch (error) {
+                log(`Error generating explosion sound: ${error}`);
+                return null;
+            }
+        }
+        
+        // Generate background music
+        function generateBackgroundMusic() {
+            if (!audioContext) {
+                log('Audio context not initialized');
+                return null;
+            }
+            
+            try {
+                const duration = 4.0; // 4-second loop
+                const sampleRate = audioContext.sampleRate;
+                const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                // Create a simple 4-note bass pattern that loops
+                const bassNotes = [100, 120, 80, 90]; // Bass frequencies
+                const beatDuration = duration / bassNotes.length;
+                
+                for (let i = 0; i < buffer.length; i++) {
+                    const t = i / sampleRate;
+                    const beatIndex = Math.floor((t % duration) / beatDuration);
+                    const beatTime = t % beatDuration;
+                    const bassFreq = bassNotes[beatIndex];
+                    
+                    // Bass drum on each beat
+                    const drumEnvelope = Math.max(0, 1 - beatTime * 10);
+                    const drum = (Math.random() * 2 - 1) * drumEnvelope * 0.3;
+                    
+                    // Bass note with envelope
+                    const bassEnvelope = Math.max(0, 1 - beatTime / beatDuration);
+                    const bass = Math.sin(2 * Math.PI * bassFreq * t) * bassEnvelope * 0.4;
+                    
+                    // Add tension with increasing tempo
+                    const tension = Math.sin(2 * Math.PI * (2 + beatIndex) * t) * 0.1;
+                    
+                    // Combine sounds
+                    data[i] = bass + drum + tension;
+                }
+                
+                log('Background music generated');
+                return buffer;
+            } catch (error) {
+                log(`Error generating background music: ${error}`);
+                return null;
+            }
+        }
+        
+        // Play a sound buffer
+        function playSound(buffer, loop = false) {
+            if (!audioContext || !buffer) {
+                log('Cannot play sound: audio context not initialized or buffer is null');
+                return null;
+            }
+            
+            try {
+                // Resume context if needed
+                if (audioContext.state === 'suspended') {
+                    log('Audio context is suspended, attempting to resume...');
+                    audioContext.resume();
+                }
+                
+                // Stop current sound if any
+                if (currentSound) {
+                    currentSound.stop();
+                    currentSound = null;
+                }
+                
+                // Create source node
+                const source = audioContext.createBufferSource();
+                source.buffer = buffer;
+                source.loop = loop;
+                
+                // Create gain node
+                const gainNode = audioContext.createGain();
+                gainNode.gain.value = 0.5;
+                
+                // Connect nodes
+                source.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Start playback
+                source.start();
+                
+                log(`Sound playing (loop: ${loop})`);
+                updateStatus();
+                
+                // Store reference to current sound
+                currentSound = {
+                    source: source,
+                    gainNode: gainNode,
+                    stop: function() {
+                        try {
+                            source.stop();
+                            log('Sound stopped');
+                        } catch (e) {
+                            log(`Error stopping sound: ${e}`);
+                        }
+                    }
+                };
+                
+                return currentSound;
+            } catch (error) {
+                log(`Error playing sound: ${error}`);
+                return null;
+            }
+        }
+        
+        // Play shoot sound
+        document.getElementById('shootButton').addEventListener('click', function() {
+            if (!audioContext) {
+                log('Audio context not initialized. Click "Initialize Audio" first.');
+                alert('Please initialize audio first!');
+                return;
+            }
+            
+            if (!sounds.shoot) {
+                sounds.shoot = generateShootSound();
+            }
+            
+            playSound(sounds.shoot);
+        });
+        
+        // Play explosion sound
+        document.getElementById('explosionButton').addEventListener('click', function() {
+            if (!audioContext) {
+                log('Audio context not initialized. Click "Initialize Audio" first.');
+                alert('Please initialize audio first!');
+                return;
+            }
+            
+            if (!sounds.explosion) {
+                sounds.explosion = generateExplosionSound();
+            }
+            
+            playSound(sounds.explosion);
+        });
+        
+        // Play background music
+        document.getElementById('backgroundButton').addEventListener('click', function() {
+            if (!audioContext) {
+                log('Audio context not initialized. Click "Initialize Audio" first.');
+                alert('Please initialize audio first!');
+                return;
+            }
+            
+            if (!sounds.background) {
+                sounds.background = generateBackgroundMusic();
+            }
+            
+            playSound(sounds.background, true);
+        });
+        
+        // Stop all sounds
+        document.getElementById('stopButton').addEventListener('click', function() {
+            if (currentSound) {
+                currentSound.stop();
+                currentSound = null;
+                log('All sounds stopped');
+            } else {
+                log('No sounds playing');
+            }
+        });
+        
+        // Initial status update
+        updateStatus();
+        log('Audio test page loaded. Click "Initialize Audio" to begin.');
+        
+        // Show an alert to confirm the page is loaded
+        window.onload = function() {
+            setTimeout(function() {
+                alert('Audio test page loaded successfully! You should see buttons on the screen.');
+            }, 500);
+        };
+    </script>
+</body>
+</html> 

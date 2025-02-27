@@ -9,10 +9,11 @@ import {
     ENEMY_SPEED,
     ENEMY_DROP_DISTANCE,
     ENEMY_SHOOT_CHANCE,
-    MAX_ENEMY_BULLETS
+    MAX_ENEMY_BULLETS,
+    SOUND_VOLUMES
 } from './constants.js';
 import { Player, Enemy, Bullet } from './entities/index.js';
-import { Renderer, Input, Animation, Collision } from './systems/index.js';
+import { Renderer, Input, Animation, Collision, SoundGenerator } from './systems/index.js';
 import { Score, Lives, GameState } from './ui/index.js';
 import { enemyShapes } from '../assets/shapes/enemyShapes.js';
 
@@ -24,6 +25,8 @@ export default class Game {
      * Create a new game
      */
     constructor() {
+        console.log('Game constructor started');
+        
         // Create canvas
         this.canvas = document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d');
@@ -36,6 +39,8 @@ export default class Game {
         this.input = new Input();
         this.animation = new Animation();
         this.collision = new Collision();
+        console.log('Creating SoundGenerator...');
+        this.soundGenerator = new SoundGenerator();
         
         // Initialize UI
         this.score = new Score();
@@ -51,11 +56,283 @@ export default class Game {
         // Enemy movement
         this.enemyDirection = 1; // 1 for right, -1 for left
         
+        // Sound buffers
+        this.soundBuffers = {};
+        this.backgroundMusic = null;
+        this.muted = false;
+        this.audioInitialized = false;
+        this.audioStartMessageShown = false;
+        
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
+        this.handleKeyPress = this.handleKeyPress.bind(this);
+        this.handleClick = this.handleClick.bind(this);
+        this.handleTouch = this.handleTouch.bind(this);
         
-        // Start the game
-        this.gameLoop();
+        // Add event listeners
+        console.log('Adding event listeners...');
+        document.addEventListener('keydown', this.handleKeyPress);
+        document.addEventListener('click', this.handleClick);
+        document.addEventListener('touchstart', this.handleTouch);
+        
+        // Initialize audio and start the game
+        console.log('Starting audio initialization...');
+        this.initializeAudio().then(() => {
+            console.log('Audio initialization completed');
+            
+            // Register callback for when audio is ready
+            console.log('Registering audio ready callback...');
+            this.soundGenerator.onReady(() => {
+                console.log('Audio is ready, starting background music');
+                this.startBackgroundMusic();
+                this.audioInitialized = true;
+                
+                // Remove audio start message if it's shown
+                this.removeAudioStartMessage();
+            });
+            
+            // Show audio start message if needed
+            console.log('Checking if audio is ready:', this.soundGenerator.isReady());
+            if (!this.soundGenerator.isReady()) {
+                console.log('Audio not ready, showing start message');
+                this.showAudioStartMessage();
+            } else {
+                console.log('Audio already ready, no need for start message');
+            }
+            
+            // Start the game loop regardless of audio state
+            console.log('Starting game loop');
+            this.gameLoop();
+        }).catch(error => {
+            console.error('Error during audio initialization:', error);
+            // Start the game loop anyway
+            this.gameLoop();
+        });
+        
+        console.log('Game constructor completed');
+    }
+    
+    /**
+     * Show a message to the user to interact with the page to start audio
+     */
+    showAudioStartMessage() {
+        if (this.audioStartMessageShown) {
+            console.log('Audio start message already shown, skipping');
+            return;
+        }
+        
+        console.log('Showing audio start message');
+        this.audioStartMessageShown = true;
+        
+        // Create message container
+        const messageContainer = document.createElement('div');
+        messageContainer.id = 'audio-start-message';
+        messageContainer.style.position = 'absolute';
+        messageContainer.style.top = '50%';
+        messageContainer.style.left = '50%';
+        messageContainer.style.transform = 'translate(-50%, -50%)';
+        messageContainer.style.backgroundColor = 'rgba(0, 0, 0, 0.9)';
+        messageContainer.style.color = 'white';
+        messageContainer.style.padding = '20px';
+        messageContainer.style.borderRadius = '10px';
+        messageContainer.style.textAlign = 'center';
+        messageContainer.style.zIndex = '1000';
+        messageContainer.style.fontFamily = 'Arial, sans-serif';
+        messageContainer.style.cursor = 'pointer';
+        messageContainer.style.border = '2px solid #4CAF50';
+        messageContainer.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.5)';
+        messageContainer.style.width = '80%';
+        messageContainer.style.maxWidth = '400px';
+        
+        // Add message text
+        messageContainer.innerHTML = `
+            <h2 style="color: #4CAF50; margin-top: 0;">Click or Press Any Key to Start</h2>
+            <p>Browser security requires user interaction before playing audio.</p>
+            <button style="padding: 10px 20px; margin-top: 10px; background-color: #4CAF50; border: none; color: white; border-radius: 5px; cursor: pointer; font-size: 16px;">Start Game with Sound</button>
+        `;
+        
+        // Add click handler to remove message and start audio
+        messageContainer.addEventListener('click', () => {
+            console.log('Audio start message clicked');
+            this.startAudio();
+            this.removeAudioStartMessage();
+        });
+        
+        // Add to document
+        document.body.appendChild(messageContainer);
+        console.log('Audio start message added to document');
+    }
+    
+    /**
+     * Remove the audio start message
+     */
+    removeAudioStartMessage() {
+        console.log('Attempting to remove audio start message');
+        try {
+            const messageContainer = document.getElementById('audio-start-message');
+            if (messageContainer) {
+                document.body.removeChild(messageContainer);
+                console.log('Audio start message removed');
+            } else {
+                console.log('No audio start message found to remove');
+            }
+            this.audioStartMessageShown = false;
+        } catch (error) {
+            console.error('Error removing audio start message:', error);
+        }
+    }
+    
+    /**
+     * Start audio after user interaction
+     */
+    startAudio() {
+        console.log('startAudio called, initialized:', this.audioInitialized);
+        if (!this.audioInitialized) {
+            console.log('Starting audio after user interaction');
+            // Resume audio context
+            console.log('Attempting to resume audio context...');
+            this.soundGenerator.resumeAudioContext().then(() => {
+                console.log('AudioContext resumed successfully');
+                console.log('Audio context state after resume:', this.soundGenerator.audioContext.state);
+                
+                if (!this.backgroundMusic) {
+                    console.log('Starting background music');
+                    this.startBackgroundMusic();
+                } else {
+                    console.log('Background music already playing');
+                }
+                
+                this.audioInitialized = true;
+                console.log('Audio initialization complete');
+                
+                // Force a test sound to verify audio is working
+                console.log('Playing test sound to verify audio...');
+                this.soundGenerator.playTestSound();
+            }).catch(error => {
+                console.error('Failed to resume audio context:', error);
+                // Try again after a short delay
+                setTimeout(() => {
+                    console.log('Retrying audio initialization...');
+                    this.startAudio();
+                }, 1000);
+            });
+        } else {
+            console.log('Audio already initialized');
+        }
+    }
+    
+    /**
+     * Handle click events
+     */
+    handleClick() {
+        console.log('Click event detected');
+        this.startAudio();
+    }
+    
+    /**
+     * Handle touch events
+     */
+    handleTouch() {
+        console.log('Touch event detected');
+        this.startAudio();
+    }
+    
+    /**
+     * Initialize audio by generating all sound effects
+     * @returns {Promise} Promise that resolves when all sounds are generated
+     */
+    async initializeAudio() {
+        console.log('Initializing audio...');
+        
+        try {
+            // Initialize the sound generator
+            console.log('Initializing sound generator...');
+            const initResult = this.soundGenerator.initialize();
+            console.log('Sound generator initialized:', initResult);
+            
+            if (!initResult) {
+                console.warn('Sound generator initialization failed, but continuing anyway');
+            }
+            
+            // Generate all sound effects
+            console.log('Generating sound effects...');
+            this.soundBuffers = {
+                shoot: this.soundGenerator.generateShootSound(),
+                explosion: this.soundGenerator.generateExplosionSound(),
+                enemyShoot: this.soundGenerator.generateEnemyShootSound(),
+                playerHit: this.soundGenerator.generatePlayerHitSound(),
+                gameOver: this.soundGenerator.generateGameOverSound(),
+                gameWin: this.soundGenerator.generateGameWinSound(),
+                background: this.soundGenerator.generateBackgroundMusic()
+            };
+            console.log('Sound effects generated');
+            
+            return Promise.resolve();
+        } catch (error) {
+            console.error('Error during audio initialization:', error);
+            return Promise.resolve(); // Resolve anyway to continue the game
+        }
+    }
+    
+    /**
+     * Start background music
+     */
+    startBackgroundMusic() {
+        console.log('Starting background music...');
+        
+        try {
+            if (this.backgroundMusic) {
+                console.log('Stopping existing background music');
+                this.backgroundMusic.stop();
+            }
+            
+            if (!this.soundBuffers.background) {
+                console.warn('Background music buffer not found');
+                return;
+            }
+            
+            console.log('Playing background music buffer');
+            this.backgroundMusic = this.soundGenerator.playSound(
+                this.soundBuffers.background, 
+                SOUND_VOLUMES.background, 
+                true
+            );
+            
+            console.log('Background music started:', this.backgroundMusic);
+            
+            // Check if music is actually playing
+            if (this.backgroundMusic && this.backgroundMusic.source) {
+                console.log('Background music source created successfully');
+            } else {
+                console.warn('Background music may not be playing correctly');
+            }
+        } catch (error) {
+            console.error('Error starting background music:', error);
+        }
+    }
+    
+    /**
+     * Handle key presses for game controls
+     * @param {KeyboardEvent} e - Keyboard event
+     */
+    handleKeyPress(e) {
+        console.log('Key pressed:', e.key);
+        
+        // Start audio on any key press
+        this.startAudio();
+        
+        // Toggle mute with 'M' key
+        if (e.key === 'm' || e.key === 'M') {
+            console.log('Mute toggled');
+            this.muted = !this.muted;
+            this.soundGenerator.setMuted(this.muted);
+            
+            // Restart background music if unmuting
+            if (!this.muted && (!this.backgroundMusic || !this.backgroundMusic.source || !this.backgroundMusic.source.loop)) {
+                console.log('Restarting background music after unmute');
+                this.startBackgroundMusic();
+            }
+        }
     }
     
     /**
@@ -97,6 +374,14 @@ export default class Game {
         // Shoot
         if (this.input.isPressed('space') && this.bullets.length < 1) {
             this.bullets.push(this.player.shoot());
+            
+            // Only play sound if audio is initialized
+            if (this.audioInitialized && !this.muted) {
+                this.soundGenerator.playSound(
+                    this.soundBuffers.shoot, 
+                    SOUND_VOLUMES.shoot
+                );
+            }
         }
     }
     
@@ -155,6 +440,15 @@ export default class Game {
                 const enemy = bottomEnemies[column];
                 if (Math.random() < ENEMY_SHOOT_CHANCE) {
                     this.enemyBullets.push(enemy.shoot());
+                    
+                    // Only play sound if audio is initialized
+                    if (this.audioInitialized && !this.muted) {
+                        this.soundGenerator.playSound(
+                            this.soundBuffers.enemyShoot, 
+                            SOUND_VOLUMES.enemyShoot
+                        );
+                    }
+                    
                     if (this.enemyBullets.length >= MAX_ENEMY_BULLETS) {
                         break;
                     }
@@ -199,6 +493,14 @@ export default class Game {
             this.enemies.splice(hit.enemyIndex, 1);
             this.bullets.splice(hit.bulletIndex, 1);
             this.score.add(10);
+            
+            // Only play sound if audio is initialized
+            if (this.audioInitialized && !this.muted) {
+                this.soundGenerator.playSound(
+                    this.soundBuffers.explosion, 
+                    SOUND_VOLUMES.explosion
+                );
+            }
         }
         
         // Check collisions between enemy bullets and player
@@ -208,8 +510,27 @@ export default class Game {
             this.enemyBullets.splice(hitIndex, 1);
             const isDead = this.player.loseLife();
             
+            // Only play sound if audio is initialized
+            if (this.audioInitialized && !this.muted) {
+                this.soundGenerator.playSound(
+                    this.soundBuffers.playerHit, 
+                    SOUND_VOLUMES.playerHit
+                );
+            }
+            
             if (isDead) {
                 this.gameState.setState('gameOver');
+                if (this.backgroundMusic) {
+                    this.backgroundMusic.stop();
+                }
+                
+                // Only play sound if audio is initialized
+                if (this.audioInitialized && !this.muted) {
+                    this.soundGenerator.playSound(
+                        this.soundBuffers.gameOver, 
+                        SOUND_VOLUMES.gameOver
+                    );
+                }
             } else {
                 // Reset player position
                 this.player.reset(CANVAS_WIDTH);
@@ -219,11 +540,33 @@ export default class Game {
         // Check if enemies have reached the player
         if (this.collision.checkEnemyReachedPlayer(this.enemies, this.player.y)) {
             this.gameState.setState('gameOver');
+            if (this.backgroundMusic) {
+                this.backgroundMusic.stop();
+            }
+            
+            // Only play sound if audio is initialized
+            if (this.audioInitialized && !this.muted) {
+                this.soundGenerator.playSound(
+                    this.soundBuffers.gameOver, 
+                    SOUND_VOLUMES.gameOver
+                );
+            }
         }
         
         // Check for win condition
         if (this.enemies.length === 0) {
             this.gameState.setState('win');
+            if (this.backgroundMusic) {
+                this.backgroundMusic.stop();
+            }
+            
+            // Only play sound if audio is initialized
+            if (this.audioInitialized && !this.muted) {
+                this.soundGenerator.playSound(
+                    this.soundBuffers.gameWin, 
+                    SOUND_VOLUMES.gameWin
+                );
+            }
         }
     }
     
@@ -260,6 +603,18 @@ export default class Game {
         
         // Draw game state message if game is over
         this.gameState.draw(this.renderer, CANVAS_WIDTH, CANVAS_HEIGHT);
+        
+        // Draw mute indicator if muted
+        if (this.muted) {
+            this.renderer.drawText('🔇 MUTED (Press M to unmute)', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 20, 'white', '14px Arial', 'center');
+        } else {
+            this.renderer.drawText('🔊 Press M to mute', CANVAS_WIDTH / 2, CANVAS_HEIGHT - 20, 'white', '14px Arial', 'center');
+        }
+        
+        // Draw audio status if not initialized
+        if (!this.audioInitialized && !this.audioStartMessageShown) {
+            this.renderer.drawText('Click or press any key to enable sound', CANVAS_WIDTH / 2, 30, 'white', '16px Arial', 'center');
+        }
     }
     
     /**
@@ -279,5 +634,24 @@ export default class Game {
         if (!this.gameState.isGameOver()) {
             requestAnimationFrame(this.gameLoop);
         }
+    }
+    
+    /**
+     * Clean up resources when game is destroyed
+     */
+    destroy() {
+        // Remove event listeners
+        document.removeEventListener('keydown', this.handleKeyPress);
+        document.removeEventListener('click', this.handleClick);
+        document.removeEventListener('touchstart', this.handleTouch);
+        this.input.destroy();
+        
+        // Stop all sounds
+        if (this.backgroundMusic) {
+            this.backgroundMusic.stop();
+        }
+        
+        // Remove audio start message if it exists
+        this.removeAudioStartMessage();
     }
 }

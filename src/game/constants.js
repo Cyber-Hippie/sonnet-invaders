@@ -27,6 +27,17 @@ export const BULLET_HEIGHT = 10;
 // Animation settings
 export const ANIMATION_SPEED = 30;
 
+// Sound settings
+export const SOUND_VOLUMES = {
+    shoot: 0.3,
+    explosion: 0.4,
+    enemyShoot: 0.2,
+    playerHit: 0.5,
+    gameOver: 0.6,
+    gameWin: 0.6,
+    background: 0.2
+};
+
 // Colors
 export const COLORS = {
   PLAYER: '#5599FF',

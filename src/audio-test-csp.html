@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval';">
+    <title>Audio Test with CSP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+        #status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Audio Test with CSP</h1>
+    
+    <div id="status">
+        Audio Status: <span id="audioStatus">Not initialized</span>
+    </div>
+    
+    <div class="controls">
+        <button id="initButton">Initialize Audio</button>
+        <button id="playButton">Play Test Sound</button>
+    </div>
+    
+    <script>
+        // Get elements
+        const initButton = document.getElementById('initButton');
+        const playButton = document.getElementById('playButton');
+        const audioStatus = document.getElementById('audioStatus');
+        
+        // Audio context
+        let audioContext = null;
+        
+        // Initialize audio
+        initButton.addEventListener('click', function() {
+            try {
+                console.log('Initializing audio...');
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('Audio context created:', audioContext);
+                
+                // Update status
+                audioStatus.textContent = audioContext.state;
+                
+                // Resume if needed
+                if (audioContext.state === 'suspended') {
+                    console.log('Audio context suspended, attempting to resume...');
+                    audioContext.resume().then(() => {
+                        console.log('Audio context resumed');
+                        audioStatus.textContent = audioContext.state;
+                    });
+                }
+            } catch (error) {
+                console.error('Error initializing audio:', error);
+                audioStatus.textContent = 'Error: ' + error.message;
+            }
+        });
+        
+        // Play test sound
+        playButton.addEventListener('click', function() {
+            if (!audioContext) {
+                alert('Please initialize audio first');
+                return;
+            }
+            
+            try {
+                console.log('Playing test sound...');
+                
+                // Create oscillator
+                const oscillator = audioContext.createOscillator();
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                
+                // Create gain node
+                const gainNode = audioContext.createGain();
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 1);
+                
+                // Connect nodes
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                // Start and stop
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 1);
+                
+                console.log('Test sound playing');
+            } catch (error) {
+                console.error('Error playing sound:', error);
+                alert('Error playing sound: ' + error.message);
+            }
+        });
+        
+        // Add a message to show the page is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded successfully');
+            alert('Audio test page loaded successfully. You should see buttons on the screen.');
+        });
+    </script>
+</body>
+</html> 
