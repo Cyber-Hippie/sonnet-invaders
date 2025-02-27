@@ -570,18 +570,20 @@ export default class Game {
             }
         }
         
-        // Check for win condition
+        // Check if all invaders are gone, then start a new attack wave
         if (this.enemies.length === 0) {
-            this.gameState.setState('win');
+            // Stop any playing sounds (optional)
             this.stopAllSounds();
-            
-            // Only play sound if audio is initialized
-            if (this.audioInitialized && !this.muted) {
-                this.soundGenerator.playSound(
-                    this.soundBuffers.gameWin, 
-                    SOUND_VOLUMES.gameWin
-                );
-            }
+
+            // Reset enemy movement and create a new wave
+            this.enemyDirection = 1;
+            this.enemies = this.createEnemies();
+
+            // Optionally, you can play a sound to indicate the new wave starting
+            // For example:
+            // if (this.audioInitialized && !this.muted) {
+            //     this.soundGenerator.playSound(this.soundBuffers.newWave, 0.4);
+            // }
         }
     }
     
