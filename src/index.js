@@ -1,4 +1,8 @@
-// Import game logic
-import './game.js';
+// Import the Game class
+import Game from './game/Game.js';
 
-console.log('Game starting...'); 
+// Initialize the game when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Game starting...');
+    new Game();
+}); 
