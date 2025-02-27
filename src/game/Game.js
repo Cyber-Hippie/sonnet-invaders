@@ -64,6 +64,9 @@ export default class Game {
         this.audioInitialized = false;
         this.audioStartMessageShown = false;
         
+        // New property: gameStarted flag
+        this.gameStarted = false;
+        
         // Bind methods
         this.gameLoop = this.gameLoop.bind(this);
         this.handleKeyPress = this.handleKeyPress.bind(this);
@@ -178,6 +181,8 @@ export default class Game {
                 console.log('No audio start message found to remove');
             }
             this.audioStartMessageShown = false;
+            // Set gameStarted to true so that the game begins
+            this.gameStarted = true;
         } catch (error) {
             console.error('Error removing audio start message:', error);
         }
@@ -648,13 +653,13 @@ export default class Game {
      * Main game loop
      */
     gameLoop() {
-        // Handle input
-        this.handleInput();
+        // Only handle input and update game state if game has started
+        if (this.gameStarted) {
+            this.handleInput();
+            this.update();
+        }
         
-        // Update game state
-        this.update();
-        
-        // Render everything
+        // Render everything (start screen or game)
         this.render();
         
         // Continue the loop if game is not over
