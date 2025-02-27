@@ -224,14 +224,8 @@ function enemyShoot() {
 
 // Draw lives
 function drawLives() {
-    ctx.fillStyle = 'white';
-    ctx.font = '20px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(`Lives: ${player.lives}`, canvas.width - 20, 30);
-    
-    // Draw small player ships to represent lives
+    // Draw small player ships to represent lives (graphical only)
     const shipWidth = 20;
-    const shipHeight = 12;
     const shipPadding = 10;
     const startX = canvas.width - 20 - (player.lives * (shipWidth + shipPadding));
     
@@ -239,7 +233,7 @@ function drawLives() {
         const x = startX + i * (shipWidth + shipPadding);
         
         ctx.save();
-        ctx.translate(x, 50);
+        ctx.translate(x, 10); // Adjust y to 10 so the icons are displayed at the top
         const scale = shipWidth / 9; // 9 is the width of our ASCII art
         ctx.scale(scale, scale);
         
