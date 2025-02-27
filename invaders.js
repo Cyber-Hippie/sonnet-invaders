@@ -45,30 +45,36 @@ let score = 0;
 const enemyTypes = [
     {
         shape: [
-            "  ▄██▄  ",
-            "▄██████▄",
-            "██▄██▄██",
-            "  ▀▀▀▀  "
+            "   ##   ",
+            "  ####  ",
+            " ###### ",
+            " ##  ## ",
+            "########",
+            "  #  #  "
         ],
-        color: '#FF0000'  // Red for top row
+        color: '#FF5555'  // Red for top row
     },
     {
         shape: [
-            " ▄████▄ ",
-            "███████",
-            "▀ ███ ▀",
-            " ▀ ▀ ▀ "
+            " ##  ## ",
+            "########",
+            "## ## ##",
+            "########",
+            "  ####  ",
+            " ##  ## "
         ],
-        color: '#00FF00'  // Green for middle rows
+        color: '#55FF55'  // Green for middle rows
     },
     {
         shape: [
-            " ▄▀▀▀▄ ",
-            "▄█▄▄▄█▄",
-            "███████",
-            "▀ ▀ ▀ ▀"
+            "  ####  ",
+            " ###### ",
+            "########",
+            "## ## ##",
+            "# #### #",
+            "#      #"
         ],
-        color: '#0099FF'  // Blue for bottom rows
+        color: '#55AAFF'  // Blue for bottom rows
     }
 ];
 
@@ -257,7 +263,7 @@ function gameLoop() {
         ctx.fillStyle = enemy.color;
         enemy.shape.forEach((row, i) => {
             for (let j = 0; j < row.length; j++) {
-                if (row[j] !== ' ') {
+                if (row[j] === '#') {
                     ctx.fillRect(j, i, 1, 1);
                 }
             }
