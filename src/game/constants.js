@@ -24,6 +24,12 @@ export const ENEMY_BULLET_SPEED = 3;
 export const BULLET_WIDTH = 3;
 export const BULLET_HEIGHT = 10;
 
+// Barricade settings
+export const BARRICADE_COUNT = 4;
+export const BARRICADE_WIDTH = 60;
+export const BARRICADE_HEIGHT = 40;
+export const BARRICADE_Y = CANVAS_HEIGHT - 120;
+
 // Animation settings
 export const ANIMATION_SPEED = 40;
 
@@ -48,5 +54,6 @@ export const COLORS = {
   BULLET: 'white',
   ENEMY_BULLET: 'red',
   TEXT: 'white',
-  BACKGROUND: 'black'
+  BACKGROUND: 'black',
+  BARRICADE: '#00FF00'
 }; 

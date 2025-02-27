@@ -10,9 +10,13 @@ import {
     ENEMY_DROP_DISTANCE,
     ENEMY_SHOOT_CHANCE,
     MAX_ENEMY_BULLETS,
-    SOUND_VOLUMES
+    SOUND_VOLUMES,
+    BARRICADE_COUNT,
+    BARRICADE_WIDTH,
+    BARRICADE_HEIGHT,
+    BARRICADE_Y
 } from './constants.js';
-import { Player, Enemy, Bullet } from './entities/index.js';
+import { Player, Enemy, Bullet, Barricade } from './entities/index.js';
 import { Renderer, Input, Animation, Collision, SoundGenerator } from './systems/index.js';
 import { Score, Lives, GameState } from './ui/index.js';
 import { enemyShapes } from '../assets/shapes/enemyShapes.js';
@@ -52,6 +56,7 @@ export default class Game {
         this.bullets = [];
         this.enemyBullets = [];
         this.enemies = this.createEnemies();
+        this.barricades = this.createBarricades();
         
         // Enemy movement
         this.enemyDirection = 1; // 1 for right, -1 for left
@@ -367,6 +372,23 @@ export default class Game {
     }
     
     /**
+     * Create barricades
+     * @returns {Array} Array of barricades
+     */
+    createBarricades() {
+        const barricades = [];
+        const totalWidth = BARRICADE_COUNT * BARRICADE_WIDTH;
+        const spacing = (CANVAS_WIDTH - totalWidth) / (BARRICADE_COUNT + 1);
+        
+        for (let i = 0; i < BARRICADE_COUNT; i++) {
+            const x = spacing + i * (BARRICADE_WIDTH + spacing);
+            barricades.push(new Barricade(x, BARRICADE_Y, BARRICADE_WIDTH, BARRICADE_HEIGHT));
+        }
+        
+        return barricades;
+    }
+    
+    /**
      * Handle player input
      */
     handleInput() {
@@ -524,6 +546,33 @@ export default class Game {
             }
         }
         
+        // Check collisions between bullets and barricades
+        for (let i = this.bullets.length - 1; i >= 0; i--) {
+            for (let j = 0; j < this.barricades.length; j++) {
+                if (this.barricades[j].checkBulletCollision(this.bullets[i])) {
+                    this.bullets.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        
+        // Check collisions between enemy bullets and barricades
+        for (let i = this.enemyBullets.length - 1; i >= 0; i--) {
+            for (let j = 0; j < this.barricades.length; j++) {
+                if (this.barricades[j].checkBulletCollision(this.enemyBullets[i])) {
+                    this.enemyBullets.splice(i, 1);
+                    break;
+                }
+            }
+        }
+        
+        // Remove destroyed barricades
+        for (let i = this.barricades.length - 1; i >= 0; i--) {
+            if (this.barricades[i].isDestroyed()) {
+                this.barricades.splice(i, 1);
+            }
+        }
+        
         // Check collisions between enemy bullets and player
         const hitIndex = this.collision.checkBulletPlayerCollision(this.enemyBullets, this.player);
         
@@ -578,6 +627,9 @@ export default class Game {
             // Reset enemy movement and create a new wave
             this.enemyDirection = 1;
             this.enemies = this.createEnemies();
+            
+            // Recreate barricades for the new wave
+            this.barricades = this.createBarricades();
 
             // Optionally, you can play a sound to indicate the new wave starting
             // For example:
@@ -610,6 +662,11 @@ export default class Game {
         
         // Draw player
         this.player.draw(this.ctx);
+        
+        // Draw barricades
+        for (const barricade of this.barricades) {
+            barricade.draw(this.ctx);
+        }
         
         // Draw bullets
         for (const bullet of this.bullets) {
