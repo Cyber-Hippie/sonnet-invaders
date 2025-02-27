@@ -17,7 +17,17 @@ const player = {
     y: canvas.height - 30,
     width: 50,
     height: 30,
-    dx: 5
+    dx: 5,
+    shape: [
+        "    #    ",
+        "   ###   ",
+        "  #####  ",
+        " ####### ",
+        "#########",
+        "#########",
+        "## ### ##"
+    ],
+    color: '#5599FF'  // Light blue for player
 };
 
 const bullets = [];
@@ -179,7 +189,22 @@ function moveEnemies() {
 // Enemy shooting
 function enemyShoot() {
     if (enemyBullets.length < maxEnemyBullets) {
+        // Create a map to track the bottom-most enemy in each column
+        const bottomEnemies = {};
+        
+        // Find the bottom-most enemy in each column
         for (let enemy of enemies) {
+            // Calculate the column position (center of the enemy)
+            const column = Math.floor(enemy.x + enemy.width / 2);
+            
+            if (!bottomEnemies[column] || enemy.y > bottomEnemies[column].y) {
+                bottomEnemies[column] = enemy;
+            }
+        }
+        
+        // Only allow bottom-most enemies to shoot
+        for (let column in bottomEnemies) {
+            const enemy = bottomEnemies[column];
             if (Math.random() < enemyShootChance) {
                 enemyBullets.push({
                     x: enemy.x + enemy.width / 2,
@@ -243,8 +268,26 @@ function checkCollisions() {
 function drawScore() {
     ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(`Score: ${score.toString().padStart(5, '0')}`, canvas.width - 10, 30);
+    ctx.textAlign = 'left';
+    ctx.fillText(`Score: ${score.toString().padStart(5, '0')}`, 20, 30);
+}
+
+// Draw player
+function drawPlayer() {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    const scale = player.width / 9; // 9 is the width of our ASCII art
+    ctx.scale(scale, scale);
+    
+    ctx.fillStyle = player.color;
+    player.shape.forEach((row, i) => {
+        for (let j = 0; j < row.length; j++) {
+            if (row[j] === '#') {
+                ctx.fillRect(j, i, 1, 1);
+            }
+        }
+    });
+    ctx.restore();
 }
 
 // Game loop
@@ -311,8 +354,7 @@ function gameLoop() {
     }
     
     // Draw player
-    ctx.fillStyle = 'blue';
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+    drawPlayer();
     
     // Draw score
     drawScore();
