@@ -75,6 +75,44 @@ export default class Barricade {
     }
 
     /**
+     * Damage the barricade when invaders reach its vertical position
+     * @param {Array} enemies - Array of enemy objects
+     * @returns {boolean} Whether any damage was done to the barricade
+     */
+    checkInvaderOverlap(enemies) {
+        let damaged = false;
+        
+        // Check if any enemy is at or below the top of the barricade
+        const enemiesOverlapping = enemies.some(enemy => 
+            enemy.y + enemy.height >= this.y - 10 // Add a small buffer zone
+        );
+        
+        if (enemiesOverlapping) {
+            // Remove some blocks from the top of the barricade
+            // Sort blocks by y position (top to bottom)
+            const sortedBlocks = [...this.blocks].sort((a, b) => a.y - b.y);
+            
+            // Remove up to 20% of the top blocks
+            const blocksToRemove = Math.ceil(this.blocks.length * 0.2);
+            const topBlocks = sortedBlocks.slice(0, blocksToRemove);
+            
+            // Remove these blocks from the barricade
+            for (const topBlock of topBlocks) {
+                const index = this.blocks.findIndex(block => 
+                    block.x === topBlock.x && block.y === topBlock.y
+                );
+                
+                if (index !== -1) {
+                    this.blocks.splice(index, 1);
+                    damaged = true;
+                }
+            }
+        }
+        
+        return damaged;
+    }
+
+    /**
      * Draw the barricade
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      */

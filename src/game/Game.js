@@ -573,6 +573,19 @@ export default class Game {
             }
         }
         
+        // Check if invaders have reached barricades and damage them
+        for (const barricade of this.barricades) {
+            if (barricade.checkInvaderOverlap(this.enemies)) {
+                // Play a sound effect if barricade is damaged by invaders
+                if (this.audioInitialized && !this.muted) {
+                    this.soundGenerator.playSound(
+                        this.soundBuffers.explosion, 
+                        SOUND_VOLUMES.explosion * 0.5
+                    );
+                }
+            }
+        }
+        
         // Check collisions between enemy bullets and player
         const hitIndex = this.collision.checkBulletPlayerCollision(this.enemyBullets, this.player);
         
