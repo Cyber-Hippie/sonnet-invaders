@@ -330,6 +330,8 @@ function drawPlayer() {
 // Game loop
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // Move player
     if (rightPressed && player.x < canvas.width - player.width) player.x += player.dx;
@@ -423,5 +425,5 @@ function gameWin() {
     drawScore(); // Show final score
 }
 
-// Start the game
+// Start the game loop
 gameLoop();
