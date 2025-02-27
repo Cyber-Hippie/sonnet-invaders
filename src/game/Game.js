@@ -465,14 +465,6 @@ export default class Game {
                 if (Math.random() < ENEMY_SHOOT_CHANCE) {
                     this.enemyBullets.push(enemy.shoot());
                     
-                    // Only play sound if audio is initialized
-                    if (this.audioInitialized && !this.muted) {
-                        this.soundGenerator.playSound(
-                            this.soundBuffers.enemyShoot, 
-                            SOUND_VOLUMES.enemyShoot
-                        );
-                    }
-                    
                     if (this.enemyBullets.length >= MAX_ENEMY_BULLETS) {
                         break;
                     }
