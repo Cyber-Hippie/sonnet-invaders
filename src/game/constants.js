@@ -25,7 +25,7 @@ export const BULLET_WIDTH = 3;
 export const BULLET_HEIGHT = 10;
 
 // Animation settings
-export const ANIMATION_SPEED = 30;
+export const ANIMATION_SPEED = 40;
 
 // Sound settings
 export const SOUND_VOLUMES = {
@@ -35,7 +35,8 @@ export const SOUND_VOLUMES = {
     playerHit: 0.5,
     gameOver: 0.6,
     gameWin: 0.6,
-    background: 0.2
+    background: 0.2,
+    invaderStep: 0.2
 };
 
 // Colors

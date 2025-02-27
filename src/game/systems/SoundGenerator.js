@@ -491,10 +491,11 @@ export default class SoundGenerator {
      * @param {AudioBuffer} buffer - The sound buffer to play
      * @param {number} volume - Volume level (0.0 to 1.0)
      * @param {boolean} loop - Whether to loop the sound
+     * @param {number} playbackRate - Playback rate (1.0 is normal speed)
      * @returns {Object} An object with controls for the sound
      */
-    playSound(buffer, volume = 1.0, loop = false) {
-        console.log('playSound called with buffer:', buffer ? 'valid buffer' : 'null buffer', 'volume:', volume, 'loop:', loop);
+    playSound(buffer, volume = 1.0, loop = false, playbackRate = 1.0) {
+        console.log('playSound called with buffer:', buffer ? 'valid buffer' : 'null buffer', 'volume:', volume, 'loop:', loop, 'playbackRate:', playbackRate);
         
         if (!this.initialized) {
             console.warn('Cannot play sound: audio not initialized');
@@ -521,7 +522,7 @@ export default class SoundGenerator {
                 this.resumeAudioContext().then(() => {
                     console.log('AudioContext resumed successfully');
                     // Try playing the sound again after resuming
-                    return this._createAndPlaySound(buffer, volume, loop);
+                    return this._createAndPlaySound(buffer, volume, loop, playbackRate);
                 }).catch(err => {
                     console.error('Failed to resume audio context:', err);
                     return {
@@ -530,20 +531,18 @@ export default class SoundGenerator {
                         stop: () => {}
                     };
                 });
-            } else {
-                return this._createAndPlaySound(buffer, volume, loop);
+                
+                return {
+                    source: null,
+                    gainNode: null,
+                    stop: () => {}
+                };
             }
             
-            // Default return in case the above code doesn't return
-            return {
-                source: null,
-                gainNode: null,
-                stop: () => {}
-            };
+            // If audio context is running, play the sound immediately
+            return this._createAndPlaySound(buffer, volume, loop, playbackRate);
         } catch (error) {
             console.error('Error playing sound:', error);
-            console.error('Error details:', error.message);
-            console.error('Error stack:', error.stack);
             return {
                 source: null,
                 gainNode: null,
@@ -556,13 +555,14 @@ export default class SoundGenerator {
      * Internal method to create and play a sound
      * @private
      */
-    _createAndPlaySound(buffer, volume, loop) {
+    _createAndPlaySound(buffer, volume, loop, playbackRate) {
         try {
             // Create source node
             console.log('Creating buffer source node');
             const source = this.audioContext.createBufferSource();
             source.buffer = buffer;
             source.loop = loop;
+            source.playbackRate.value = playbackRate;
             
             // Create gain node for volume control
             console.log('Creating gain node with volume:', volume);
@@ -582,6 +582,7 @@ export default class SoundGenerator {
                 console.log('Playing sound:', { 
                     volume, 
                     loop, 
+                    playbackRate,
                     buffer: {
                         duration: buffer.duration,
                         numberOfChannels: buffer.numberOfChannels,
@@ -644,6 +645,50 @@ export default class SoundGenerator {
         this.setMasterVolume(muted ? 0 : 1);
         if (this.debugMode) {
             console.log('Audio muted:', muted);
+        }
+    }
+
+    /**
+     * Generate a sound for invader movement
+     * @returns {AudioBuffer} The generated sound buffer
+     */
+    generateInvaderStepSound() {
+        if (!this.initialized) {
+            console.warn('Sound generator not initialized');
+            return null;
+        }
+        
+        try {
+            const sampleRate = this.audioContext.sampleRate;
+            const duration = 0.12; // Shorter duration for more immediate feedback
+            const bufferSize = sampleRate * duration;
+            const buffer = this.audioContext.createBuffer(1, bufferSize, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            // Classic Space Invaders uses 4 descending tones
+            const baseFrequencies = [480, 440, 400, 360]; // Higher frequencies for more clarity
+            const noteDuration = duration / baseFrequencies.length;
+            
+            for (let i = 0; i < bufferSize; i++) {
+                const t = i / sampleRate;
+                const noteIndex = Math.min(Math.floor(t / noteDuration), baseFrequencies.length - 1);
+                const noteTime = t - noteIndex * noteDuration; // Time within the current note
+                
+                // Use square wave for more retro sound
+                const freq = baseFrequencies[noteIndex];
+                const wave = noteTime * freq % 1 < 0.5 ? 1 : -1;
+                
+                // Apply envelope to each note - sharper attack for more distinct sound
+                const noteProgress = noteTime / noteDuration;
+                const envelope = noteProgress < 0.1 ? noteProgress * 10 : 1 - (noteProgress - 0.1) / 0.9;
+                
+                data[i] = wave * envelope;
+            }
+            
+            return buffer;
+        } catch (error) {
+            console.error('Error generating invader step sound:', error);
+            return null;
         }
     }
 } 

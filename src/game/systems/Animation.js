@@ -7,6 +7,7 @@ export default class Animation {
     constructor() {
         this.frame = 0;
         this.counter = 0;
+        this.lastFrameTime = 0;
     }
 
     /**
@@ -14,13 +15,29 @@ export default class Animation {
      * @returns {boolean} True if the animation frame changed
      */
     update() {
+        // Increment counter
         this.counter++;
+        
+        // Check if it's time to change the frame
         if (this.counter >= ANIMATION_SPEED) {
             this.counter = 0;
             this.frame = 1 - this.frame; // Toggle between 0 and 1
+            this.lastFrameTime = performance.now();
             return true;
         }
+        
         return false;
+    }
+
+    /**
+     * Force a frame change
+     * @returns {number} The new frame
+     */
+    forceFrameChange() {
+        this.counter = 0;
+        this.frame = 1 - this.frame;
+        this.lastFrameTime = performance.now();
+        return this.frame;
     }
 
     /**
@@ -37,5 +54,6 @@ export default class Animation {
     reset() {
         this.frame = 0;
         this.counter = 0;
+        this.lastFrameTime = 0;
     }
 } 

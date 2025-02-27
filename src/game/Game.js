@@ -59,6 +59,7 @@ export default class Game {
         // Sound buffers
         this.soundBuffers = {};
         this.backgroundMusic = null;
+        this.invaderStepSound = null;
         this.muted = false;
         this.audioInitialized = false;
         this.audioStartMessageShown = false;
@@ -263,7 +264,8 @@ export default class Game {
                 playerHit: this.soundGenerator.generatePlayerHitSound(),
                 gameOver: this.soundGenerator.generateGameOverSound(),
                 gameWin: this.soundGenerator.generateGameWinSound(),
-                background: this.soundGenerator.generateBackgroundMusic()
+                background: this.soundGenerator.generateBackgroundMusic(),
+                invaderStep: this.soundGenerator.generateInvaderStepSound()
             };
             console.log('Sound effects generated');
             
@@ -386,15 +388,37 @@ export default class Game {
     }
     
     /**
-     * Move enemies
+     * Move enemies and update their animation
      */
     moveEnemies() {
         let dropEnemies = false;
         let leftmostEnemy = Infinity;
         let rightmostEnemy = -Infinity;
         
-        // Update animation
-        this.animation.update();
+        // Update animation and play sound if frame changed
+        const frameChanged = this.animation.update();
+        
+        // Play invader step sound if animation frame changed and audio is initialized
+        if (frameChanged && this.audioInitialized && !this.muted && this.enemies.length > 0) {
+            // Calculate volume based on number of enemies (more enemies = louder sound)
+            const volumeScale = Math.min(1, this.enemies.length / (ENEMY_ROWS * ENEMY_COLS));
+            const volume = SOUND_VOLUMES.invaderStep * (0.5 + 0.5 * volumeScale);
+            
+            // Calculate playback rate based on number of enemies (fewer enemies = faster sound)
+            const speedScale = 1 + (1 - this.enemies.length / (ENEMY_ROWS * ENEMY_COLS)) * 0.5;
+            
+            // Force a new sound to play each time the frame changes
+            if (this.invaderStepSound) {
+                this.invaderStepSound.stop();
+            }
+            
+            this.invaderStepSound = this.soundGenerator.playSound(
+                this.soundBuffers.invaderStep,
+                volume,
+                false,
+                speedScale
+            );
+        }
         
         // Move enemies horizontally
         for (const enemy of this.enemies) {
@@ -520,9 +544,7 @@ export default class Game {
             
             if (isDead) {
                 this.gameState.setState('gameOver');
-                if (this.backgroundMusic) {
-                    this.backgroundMusic.stop();
-                }
+                this.stopAllSounds();
                 
                 // Only play sound if audio is initialized
                 if (this.audioInitialized && !this.muted) {
@@ -540,9 +562,7 @@ export default class Game {
         // Check if enemies have reached the player
         if (this.collision.checkEnemyReachedPlayer(this.enemies, this.player.y)) {
             this.gameState.setState('gameOver');
-            if (this.backgroundMusic) {
-                this.backgroundMusic.stop();
-            }
+            this.stopAllSounds();
             
             // Only play sound if audio is initialized
             if (this.audioInitialized && !this.muted) {
@@ -556,9 +576,7 @@ export default class Game {
         // Check for win condition
         if (this.enemies.length === 0) {
             this.gameState.setState('win');
-            if (this.backgroundMusic) {
-                this.backgroundMusic.stop();
-            }
+            this.stopAllSounds();
             
             // Only play sound if audio is initialized
             if (this.audioInitialized && !this.muted) {
@@ -567,6 +585,20 @@ export default class Game {
                     SOUND_VOLUMES.gameWin
                 );
             }
+        }
+    }
+    
+    /**
+     * Stop all game sounds
+     */
+    stopAllSounds() {
+        if (this.backgroundMusic) {
+            this.backgroundMusic.stop();
+        }
+        
+        if (this.invaderStepSound) {
+            this.invaderStepSound.stop();
+            this.invaderStepSound = null;
         }
     }
     
@@ -590,9 +622,12 @@ export default class Game {
             bullet.draw(this.ctx);
         }
         
-        // Draw enemies
+        // Get current animation frame
+        const currentFrame = this.animation.getCurrentFrame();
+        
+        // Draw enemies with the same animation frame
         for (const enemy of this.enemies) {
-            enemy.draw(this.ctx, this.animation.getCurrentFrame());
+            enemy.draw(this.ctx, currentFrame);
         }
         
         // Draw score
@@ -647,9 +682,7 @@ export default class Game {
         this.input.destroy();
         
         // Stop all sounds
-        if (this.backgroundMusic) {
-            this.backgroundMusic.stop();
-        }
+        this.stopAllSounds();
         
         // Remove audio start message if it exists
         this.removeAudioStartMessage();
